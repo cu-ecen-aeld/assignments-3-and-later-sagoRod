@@ -1,3 +1,8 @@
+#include "stdlib.h"
+#include "sys/wait.h"
+#include "unistd.h"
+#include "errno.h"
+#include "fcntl.h"
 #include "systemcalls.h"
 
 /**
@@ -9,15 +14,16 @@
 */
 bool do_system(const char *cmd)
 {
+    bool ret = true;
 
-/*
- * TODO  add your code here
- *  Call the system() function with the command set in the cmd
- *   and return a boolean true if the system() call completed with success
- *   or false() if it returned a failure
-*/
+    int sys_ret = system(cmd);
 
-    return true;
+    if( 0 != sys_ret)
+    {
+        ret = false;
+    }
+
+    return ret;
 }
 
 /**
@@ -45,23 +51,31 @@ bool do_exec(int count, ...)
         command[i] = va_arg(args, char *);
     }
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
 
-/*
- * TODO:
- *   Execute a system command by calling fork, execv(),
- *   and wait instead of system (see LSP page 161).
- *   Use the command[0] as the full path to the command to execute
- *   (first argument to execv), and use the remaining arguments
- *   as second argument to the execv() command.
- *
-*/
+    int child_stat;
+    bool ret = true;
+
+    pid_t child_pid = fork();
+
+    if (child_pid == 0) {
+        // Child process
+        execv(command[0], command); 
+        
+        exit(errno);
+    }
+    else{
+        // Parent process
+        wait(&child_stat);  // suspends execution of the parent
+
+        if (WIFEXITED(child_stat)) // Check if the child terminated normally
+        {
+            ret = WEXITSTATUS(child_stat) == 0 ? true: false;
+        }
+    }
 
     va_end(args);
 
-    return true;
+    return ret;
 }
 
 /**
@@ -84,16 +98,31 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // and may be removed
     command[count] = command[count];
 
+    bool ret = true;
+    int child_stat;
+    
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    
+    pid_t child_pid = fork();
 
-/*
- * TODO
- *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
- *   redirect standard out to a file specified by outputfile.
- *   The rest of the behaviour is same as do_exec()
- *
-*/
+    if (child_pid == 0) {
+        // Child process      
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+        execv(command[0], command);
+    } else {
+        // Parent process
+        wait(&child_stat);  // suspends execution of the parent
+        
+        if (WIFEXITED(child_stat)) // Check if the child terminated normally
+        {
+            ret = WEXITSTATUS(child_stat) == 0 ? true: false;
+        }
+        
+        close(fd);
+    }
 
     va_end(args);
 
-    return true;
+    return ret;
 }
