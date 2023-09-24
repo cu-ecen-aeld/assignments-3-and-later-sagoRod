@@ -1,5 +1,5 @@
 CC  = $(CROSS_COMPILE)gcc
-CFLAGS  = -Wall -DDEBUG -g
+CFLAGS  = -Wall -Werror -DDEBUG -g
 
 LDFLAGS = 
 LDLIBS  = 
