@@ -78,16 +78,18 @@ make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install        # or  install
 
 # Add library dependencies to rootfs
+TMP_PATH=$(which aarch64-none-linux-gnu-gcc)
+ARM_CROSS_BIN_PATH=${TMP_PATH%/*}
+ARM_CROSS_PATH=${ARM_CROSS_BIN_PATH%/*}
+
 for file in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "program interpreter" | grep -Po "\/lib\/[a-z].*.[0-9]"); do 
-    libFile=$(locate ${file} | grep "arm-cross-compiler")
-    cp ${libFile} ${OUTDIR}/rootfs/lib64
+    libFile=${ARM_CROSS_PATH}/aarch64-none-linux-gnu/libc${file}
     cp ${libFile} ${OUTDIR}/rootfs/lib
 done
 
 for file in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "Shared library" | grep -Po "lib[a-z.]*.so.[0-9]"); do 
-    libFile=$(locate ${file} | grep "arm-cross-compiler")
+    libFile=${ARM_CROSS_PATH}/aarch64-none-linux-gnu/libc/lib64/${file}
     cp ${libFile} ${OUTDIR}/rootfs/lib64
-    cp ${libFile} ${OUTDIR}/rootfs/lib
 done
 
 # TODO: Make device nodes (SKIP)
